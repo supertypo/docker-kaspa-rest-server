@@ -1,6 +1,8 @@
 #!/bin/sh
 PUSH=$1
 
+DOCKER_REPO=supertypo/kaspa-rest-server
+
 BUILD_DIR="$(dirname $0)"
 REPO_URL="https://github.com/lAmeR1/kaspa-rest-server.git"
 REPO_DIR="$BUILD_DIR/work/kaspa-rest-server"
@@ -12,23 +14,23 @@ if [ ! -d "$REPO_DIR" ]; then
   echo $(cd "$REPO_DIR" && git reset --hard HEAD~1)
 fi
 
+tag=$(cd "$REPO_DIR" && git log -n1 --format="%cs.%h")
+
 if $(cd "$REPO_DIR" && git pull | grep -qv "up to date"); then
-  commitId=$(cd "$REPO_DIR" && git log -n1 --format="%h")
-  tag=$(date -u +"%Y-%m-%d").$commitId
+  tag=$(cd "$REPO_DIR" && git log -n1 --format="%cs.%h")
   echo
   echo "Git repo changed, building tag '$tag'."
   echo
 
-  docker build --pull --build-arg REPO_DIR="$REPO_DIR" -t supertypo/kaspa-rest-server:$tag "$BUILD_DIR"
-  docker tag supertypo/kaspa-rest-server:$tag supertypo/kaspa-rest-server:latest
-  echo Tagged supertypo/kaspa-rest-server:latest
-
-  if [ "$PUSH" = "push" ]; then
-    docker push supertypo/kaspa-rest-server:$tag
-    docker push supertypo/kaspa-rest-server:latest
-  fi
+  docker build --pull --build-arg REPO_DIR="$REPO_DIR" -t $DOCKER_REPO:$tag "$BUILD_DIR"
+  docker tag $DOCKER_REPO:$tag $DOCKER_REPO:latest
+  echo Tagged $DOCKER_REPO:latest
 else
-  commitId=$(cd "$REPO_DIR" && git log -n1 --format="%h")
-  echo "Git repo is still at '$commitId', skipping build."
+  echo "Git repo is still at '$tag', skipping build."
+fi
+
+if [ "$PUSH" = "push" ]; then
+  docker push $DOCKER_REPO:$tag
+  docker push $DOCKER_REPO:latest
 fi
 
